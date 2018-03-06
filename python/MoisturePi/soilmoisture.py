@@ -1,14 +1,13 @@
-#import sys
-#import requests       #to use emoncms
 from RPi import GPIO
-#import math
-#import string
 from time import sleep
 from Adafruit_ADS1x15 import ADS1115
 
 class SoilMoisture:
     status = ""
     res_dict = {2/3: 6144, 1: 4096, 2: 2048, 4: 1024, 16: 256}
+    NORMAL_MODE = 0
+    REVERTED_MODE = -1
+    POWER_PIN = 18
     
     def __init__(self):
         self.status = "Initializing"
@@ -22,9 +21,11 @@ class SoilMoisture:
         #  -  16 = +/-0.256V
         # See table 3 in the ADS1015/ADS1115 datasheet for more info on gain.
         
-        # Hygromter powerd by a GPIO line -> 3.3 
-        # The ADC will be powered at 3.3 Vcc so it requires 1 to be precise
+        # Soil moisture sensor powerd by a GPIO line -> 3.3 
         self.gain = 1
+
+        #Set gain to 2/3 to monitor battery while it is charging
+        #self.gain = 2/3
         
         #Resolution is 16 bits so 2^16 = 65536
         #self.resolution = 65536
@@ -50,7 +51,7 @@ class SoilMoisture:
         
         #Configure GPIO mode and channels
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(18, GPIO.OUT, initial=GPIO.LOW)
+        GPIO.setup(self.POWER_PIN, GPIO.OUT, initial=GPIO.LOW)
         
         
         self.readCalibration()
@@ -60,13 +61,13 @@ class SoilMoisture:
 
     def readData(self):
         self.status = "Reading"
-        #Power on the hygrometer
-        #GPIO.output(18, GPIO.HIGH)
-        #sleep(0.5)
+        #Power on
+        GPIO.output(self.POWER_PIN, GPIO.HIGH)
+        sleep(0.01)
         #Get the raw adc value
         self.raw = self.adc.read_adc(self.channel, gain=self.gain)
-        #Power off the hygrometer
-        #GPIO.output(18, GPIO.LOW)
+        #Power off
+        GPIO.output(self.POWER_PIN, GPIO.LOW)
         
         #self.volts = (self.raw * self.gainV) / self.resmax 
         self.volts = self.raw * self.resolution
@@ -111,9 +112,12 @@ class SoilMoisture:
     def getMin(self):
         return self.min
     
-    def getPerc(self):
+    def getPerc(self,mode=NORMAL_MODE):
         perc = ((self.volts - self.min)/(self.max - self.min))*100
-        return 100 - perc
+        if(mode == self.REVERTED_MODE):
+            return 100 - perc
+        else:
+            return perc;
     
     def setCalibration(self, minV, maxV):
         self.min = minV
@@ -142,9 +146,12 @@ class SoilMoisture:
 
         return True
     
+    def setGain(self, gain):
+        self.gain = gain
+    
     def cleanup(self):
         print("Cleaning up GPIO")
-        GPIO.output(18, GPIO.LOW)
+        GPIO.output(self.POWER_PIN, GPIO.LOW)
         GPIO.cleanup()
 #hydro = SoilMoisture()    
 #hydro.readCalibration()
