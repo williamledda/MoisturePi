@@ -1,0 +1,14 @@
+[Unit]
+Description=MoisturePi Service
+
+[Service]
+#WorkingDirectory=/home/pi/MoisturePi/python
+#Using a custom service instead to call directly python scipt allows more flexibility
+ExecStart=/home/pi/MoisturePi/service/moisturepi-control.sh
+#ExecStart=/usr/bin/python3 moisturepi_server.py
+SyslogIdentifier=MoisturePi
+
+[Install]
+WantedBy=multi-user.target
+#Alias=mo.service
+
