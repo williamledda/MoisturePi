@@ -4,6 +4,7 @@ Created on 17 set 2017
 @author: willy
 '''
 
+import sys
 import socket
 from .soilmoisture import SoilMoisture
 
@@ -20,14 +21,16 @@ class MoisturePiServer(object):
     def start(self):
         self.sock.bind(self.address)
         print("Listening on " + str(self.address))
+        sys.stdout.flush()
 
         while True:
             try:
                 (payload, client_address) = self.sock.recvfrom(1024)
                 command = str(payload, "UTF8")
             
-                print("Data received: [" + str(len(command)) + "] " + 
-                    command + " from " + str(client_address))
+#                 print("Data received: [" + str(len(command)) + "] " + 
+#                     command + " from " + str(client_address), file=sys.stderr)
+#                 sys.stderr.flush()
             
                 resp = self.parse(command)
                 self.sock.sendto(bytes  (resp, "UTF8"), client_address)
